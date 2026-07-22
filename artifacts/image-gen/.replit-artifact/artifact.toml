@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "AI Image Generator"
+version = "1.0.0"
+id = "artifacts/image-gen"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22062
+
+[services.development]
+run = "pnpm --filter @workspace/image-gen run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/image-gen", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/image-gen/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22062"
+BASE_PATH = "/"

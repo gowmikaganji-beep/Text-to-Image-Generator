@@ -1,0 +1,205 @@
+Build a modern AI-powered Text-to-Image Generator web application with a beautiful UI and production-ready code.
+
+Tech Stack:
+- Frontend: React + TypeScript + Vite
+- Styling: Tailwind CSS + Shadcn UI
+- Backend: Node.js + Express
+- Database: PostgreSQL (NeonDB) with Prisma ORM
+- Image Generation API: OpenAI Images API (GPT Image 1) or Stability AI (make API configurable)
+- Authentication: Clerk or Supabase Auth
+- Storage: Cloudinary (or local storage for development)
+- State Management: TanStack Query
+- Form Validation: React Hook Form + Zod
+
+Design Requirements:
+- Premium modern UI inspired by Midjourney, Leonardo AI, Ideogram, and Flux.
+- Dark mode by default.
+- Glassmorphism cards.
+- Animated gradients.
+- Smooth Framer Motion animations.
+- Fully responsive.
+- Professional typography.
+- Beautiful loading skeletons.
+- Mobile-friendly.
+
+Features:
+
+Authentication
+- Email login/signup
+- Google login
+- User profile
+- Logout
+
+Dashboard
+- Prompt input box
+- Negative prompt input
+- Image size selector
+    - 512×512
+    - 768×768
+    - 1024×1024
+- Number of images
+- Aspect ratio selector
+- Style presets:
+    - Realistic
+    - Anime
+    - Digital Art
+    - Oil Painting
+    - Watercolor
+    - Pixel Art
+    - Cinematic
+    - Fantasy
+    - Cyberpunk
+    - Minimal
+- Quality selector
+- Creativity slider
+- Seed option
+- Generate button
+
+Image Generation
+- Call image generation API.
+- Show progress indicator.
+- Display generated images in responsive grid.
+- Allow regeneration.
+- Show generation time.
+
+Image Actions
+- Download
+- Copy prompt
+- Share
+- Favorite
+- Delete
+- Upscale
+- Variations
+- Edit prompt
+- Fullscreen preview
+
+History
+- Store all prompts.
+- Store generated images.
+- Search history.
+- Filter by date.
+- Pagination.
+
+Collections
+- Create collections.
+- Move images between collections.
+- Favorite images.
+- Delete collections.
+
+Search
+- Search prompts.
+- Search images.
+- Search collections.
+
+Admin Panel
+- Total users
+- Images generated
+- API usage
+- Credits consumed
+- Daily analytics
+
+Settings
+- Theme toggle
+- API key management
+- Default image size
+- Default style
+- Notification settings
+
+Database Schema
+
+Users
+Images
+Prompts
+Collections
+Favorites
+APIUsage
+
+Use Prisma models.
+
+Backend API
+
+POST /generate
+GET /history
+DELETE /image/:id
+POST /favorite
+POST /collection
+GET /collections
+POST /upscale
+POST /variation
+GET /analytics
+
+UI Components
+
+Navbar
+Sidebar
+Dashboard
+Prompt Card
+Image Card
+History Page
+Collection Page
+Profile Page
+Settings Page
+Admin Dashboard
+
+Animations
+- Framer Motion page transitions
+- Image hover animations
+- Skeleton loading
+- Button ripple effects
+- Fade-in generated images
+
+Error Handling
+- Retry failed generations
+- Toast notifications
+- Loading states
+- API validation
+- Rate limiting
+
+Security
+- JWT authentication
+- Input sanitization
+- Rate limiting
+- Secure API routes
+- Environment variables
+- Prisma validation
+
+Project Structure
+
+client/
+components/
+pages/
+hooks/
+services/
+utils/
+types/
+
+server/
+controllers/
+routes/
+middleware/
+services/
+prisma/
+utils/
+
+Deliverables
+
+Generate the complete project with:
+
+- Full frontend
+- Full backend
+- Prisma schema
+- SQL migration
+- Environment example (.env.example)
+- API integration
+- Authentication
+- Responsive UI
+- README.md
+- Installation guide
+- Deployment guide for Vercel (Frontend) and Render/Railway (Backend)
+
+The project should be fully functional after running:
+
+npm install
+npm run dev
+
+Ensure clean architecture, reusable components, proper TypeScript types, modular folder structure, and production-ready code with comments where necessary.
