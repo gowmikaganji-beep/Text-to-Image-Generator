@@ -14,8 +14,6 @@ import {
   ListImagesQueryParams,
   ListRecentImagesQueryParams,
 } from "@workspace/api-zod";
-import OpenAI from "openai";
-
 const router: IRouter = Router();
 
 function requireAuth(req: any, res: any, next: any): void {
@@ -29,10 +27,72 @@ function requireAuth(req: any, res: any, next: any): void {
   next();
 }
 
-function getOpenAI(): OpenAI {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
-  return new OpenAI({ apiKey });
+// Map style preset → best Pollinations model
+const STYLE_MODEL_MAP: Record<string, string> = {
+  "Realistic":    "flux-realism",
+  "Anime":        "flux-anime",
+  "Digital Art":  "flux",
+  "Oil Painting": "flux",
+  "Watercolor":   "flux",
+  "Pixel Art":    "flux",
+  "Cinematic":    "flux-realism",
+  "Fantasy":      "flux",
+  "Cyberpunk":    "any-dark",
+  "Minimal":      "flux",
+};
+
+/**
+ * Generate an image via Pollinations.AI — 100% free, no API key required.
+ * Returns a base64 data URL string.
+ */
+async function generateWithPollinations(opts: {
+  prompt: string;
+  negativePrompt?: string | null;
+  style?: string | null;
+  width: number;
+  height: number;
+  seed?: number | null;
+  enhance?: boolean;
+}): Promise<string> {
+  const { prompt, negativePrompt, style, width, height, seed, enhance } = opts;
+
+  // Enrich the prompt with style wording so the model understands it
+  const fullPrompt = style ? `${prompt}, ${style} style` : prompt;
+  const model = (style && STYLE_MODEL_MAP[style]) ?? "flux";
+
+  const params = new URLSearchParams({
+    width:  String(width),
+    height: String(height),
+    model,
+    nologo: "true",
+    ...(seed          ? { seed: String(seed) }         : {}),
+    ...(negativePrompt ? { negative: negativePrompt }  : {}),
+    ...(enhance        ? { enhance: "true" }            : {}),
+  });
+
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?${params}`;
+
+  // Give Pollinations up to 120 s — complex prompts can take a while
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120_000);
+
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) {
+      throw new Error(`Pollinations API returned ${res.status} ${res.statusText}`);
+    }
+    const buffer = await res.arrayBuffer();
+    const b64 = Buffer.from(buffer).toString("base64");
+    const mime = res.headers.get("content-type") ?? "image/jpeg";
+    return `data:${mime};base64,${b64}`;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function parseDimensions(size: string): { width: number; height: number } {
+  const [w, h] = size.split("x").map(Number);
+  return { width: w || 1024, height: h || 1024 };
 }
 
 // POST /generate
@@ -43,75 +103,40 @@ router.post("/generate", requireAuth, async (req: any, res: any): Promise<void> 
     return;
   }
 
-  const { prompt, negativePrompt, style, size, quality } = parsed.data;
-  const openai = getOpenAI();
+  const { prompt, negativePrompt, style, size, quality, seed } = parsed.data;
+  const { width, height } = parseDimensions(size ?? "1024x1024");
 
   const start = Date.now();
   try {
-    // Build enriched prompt with style
-    const stylePrompt = style
-      ? `${prompt}. Style: ${style} art style.`
-      : prompt;
-
-    // dall-e-3 supports 1024x1024, 1792x1024, 1024x1792
-    const sizeMap: Record<string, "1024x1024" | "1792x1024" | "1024x1792"> = {
-      "1024x1024": "1024x1024",
-      "1536x1024": "1792x1024",
-      "1024x1536": "1024x1792",
-    };
-    const imageSize = sizeMap[size ?? "1024x1024"] ?? "1024x1024";
-
-    // dall-e-3 uses "standard" or "hd"
-    const imageQuality = quality === "high" ? "hd" : "standard";
-
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: stylePrompt,
-      size: imageSize,
-      quality: imageQuality,
-      response_format: "b64_json",
-      n: 1,
+    const imageUrl = await generateWithPollinations({
+      prompt,
+      negativePrompt,
+      style,
+      width,
+      height,
+      seed,
+      enhance: quality === "high",
     });
 
     const generationTimeMs = Date.now() - start;
-    const b64 = response.data?.[0]?.b64_json;
-    if (!b64) {
-      res.status(500).json({ error: "No image data returned from API" });
-      return;
-    }
-
-    const imageUrl = `data:image/png;base64,${b64}`;
 
     const [image] = await db
       .insert(imagesTable)
       .values({
-        userId: req.userId,
+        userId:          req.userId,
         prompt,
-        negativePrompt: negativePrompt ?? null,
+        negativePrompt:  negativePrompt ?? null,
         imageUrl,
-        size: imageSize,
-        style: style ?? null,
-        quality: quality ?? "standard",
-        isFavorite: false,
+        size:            size ?? "1024x1024",
+        style:           style ?? null,
+        quality:         quality ?? "standard",
+        seed:            seed ?? null,
+        isFavorite:      false,
         generationTimeMs,
       })
       .returning();
 
-    res.status(201).json({
-      id: image.id,
-      userId: image.userId,
-      prompt: image.prompt,
-      negativePrompt: image.negativePrompt ?? null,
-      title: image.title ?? null,
-      imageUrl: image.imageUrl,
-      size: image.size,
-      style: image.style ?? null,
-      quality: image.quality ?? null,
-      seed: image.seed ?? null,
-      isFavorite: image.isFavorite,
-      generationTimeMs: image.generationTimeMs,
-      createdAt: image.createdAt.toISOString(),
-    });
+    res.status(201).json(toImageResponse(image));
   } catch (err: any) {
     req.log.error({ err }, "Image generation failed");
     res.status(500).json({ error: err.message ?? "Image generation failed" });
@@ -302,51 +327,32 @@ router.post("/images/:id/variations", requireAuth, async (req: any, res: any): P
     return;
   }
 
-  const openai = getOpenAI();
   const variationPrompt = parsed.data.prompt ?? original.prompt;
-  const variationStyle = parsed.data.style ?? original.style ?? undefined;
-  const stylePrompt = variationStyle
-    ? `${variationPrompt}. Style: ${variationStyle} art style.`
-    : variationPrompt;
+  const variationStyle = parsed.data.style ?? original.style ?? null;
+  const { width, height } = parseDimensions(original.size ?? "1024x1024");
 
   const start = Date.now();
   try {
-    const sizeMap: Record<string, "1024x1024" | "1792x1024" | "1024x1792"> = {
-      "1024x1024": "1024x1024",
-      "1536x1024": "1792x1024",
-      "1024x1536": "1024x1792",
-    };
-    const imageSize = sizeMap[original.size ?? "1024x1024"] ?? "1024x1024";
-    const imageQuality = original.quality === "high" ? "hd" : "standard";
-
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: stylePrompt,
-      size: imageSize,
-      quality: imageQuality,
-      response_format: "b64_json",
-      n: 1,
+    const imageUrl = await generateWithPollinations({
+      prompt: variationPrompt,
+      style: variationStyle,
+      width,
+      height,
+      enhance: original.quality === "high",
     });
 
     const generationTimeMs = Date.now() - start;
-    const b64 = response.data?.[0]?.b64_json;
-    if (!b64) {
-      res.status(500).json({ error: "No image data returned from API" });
-      return;
-    }
-
-    const imageUrl = `data:image/png;base64,${b64}`;
 
     const [image] = await db
       .insert(imagesTable)
       .values({
-        userId: req.userId,
-        prompt: variationPrompt,
+        userId:          req.userId,
+        prompt:          variationPrompt,
         imageUrl,
-        size: imageSize,
-        style: variationStyle ?? null,
-        quality: original.quality ?? "standard",
-        isFavorite: false,
+        size:            original.size ?? "1024x1024",
+        style:           variationStyle,
+        quality:         original.quality ?? "standard",
+        isFavorite:      false,
         generationTimeMs,
       })
       .returning();
