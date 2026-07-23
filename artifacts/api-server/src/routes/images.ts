@@ -53,27 +53,23 @@ router.post("/generate", requireAuth, async (req: any, res: any): Promise<void> 
       ? `${prompt}. Style: ${style} art style.`
       : prompt;
 
-    const validSizes: Record<string, "1024x1024" | "1536x1024" | "1024x1536"> = {
+    // dall-e-3 supports 1024x1024, 1792x1024, 1024x1792
+    const sizeMap: Record<string, "1024x1024" | "1792x1024" | "1024x1792"> = {
       "1024x1024": "1024x1024",
-      "1536x1024": "1536x1024",
-      "1024x1536": "1024x1536",
+      "1536x1024": "1792x1024",
+      "1024x1536": "1024x1792",
     };
-    const imageSize = validSizes[size ?? "1024x1024"] ?? "1024x1024";
+    const imageSize = sizeMap[size ?? "1024x1024"] ?? "1024x1024";
 
-    // gpt-image-1 uses "low" | "medium" | "high" — not "standard"
-    const qualityMap: Record<string, "low" | "medium" | "high"> = {
-      standard: "medium",
-      high: "high",
-      low: "low",
-      medium: "medium",
-    };
-    const imageQuality = qualityMap[quality ?? "standard"] ?? "medium";
+    // dall-e-3 uses "standard" or "hd"
+    const imageQuality = quality === "high" ? "hd" : "standard";
 
     const response = await openai.images.generate({
-      model: "gpt-image-1",
+      model: "dall-e-3",
       prompt: stylePrompt,
       size: imageSize,
       quality: imageQuality,
+      response_format: "b64_json",
       n: 1,
     });
 
@@ -84,7 +80,6 @@ router.post("/generate", requireAuth, async (req: any, res: any): Promise<void> 
       return;
     }
 
-    // Store as data URL (base64) — in production would upload to object storage
     const imageUrl = `data:image/png;base64,${b64}`;
 
     const [image] = await db
@@ -316,23 +311,20 @@ router.post("/images/:id/variations", requireAuth, async (req: any, res: any): P
 
   const start = Date.now();
   try {
-    const validSizes: Record<string, "1024x1024" | "1536x1024" | "1024x1536"> = {
+    const sizeMap: Record<string, "1024x1024" | "1792x1024" | "1024x1792"> = {
       "1024x1024": "1024x1024",
-      "1536x1024": "1536x1024",
-      "1024x1536": "1024x1536",
+      "1536x1024": "1792x1024",
+      "1024x1536": "1024x1792",
     };
-    const imageSize = validSizes[original.size ?? "1024x1024"] ?? "1024x1024";
-
-    const qualityMap: Record<string, "low" | "medium" | "high"> = {
-      standard: "medium", high: "high", low: "low", medium: "medium",
-    };
-    const imageQuality = qualityMap[original.quality ?? "standard"] ?? "medium";
+    const imageSize = sizeMap[original.size ?? "1024x1024"] ?? "1024x1024";
+    const imageQuality = original.quality === "high" ? "hd" : "standard";
 
     const response = await openai.images.generate({
-      model: "gpt-image-1",
+      model: "dall-e-3",
       prompt: stylePrompt,
       size: imageSize,
       quality: imageQuality,
+      response_format: "b64_json",
       n: 1,
     });
 
