@@ -60,10 +60,20 @@ router.post("/generate", requireAuth, async (req: any, res: any): Promise<void> 
     };
     const imageSize = validSizes[size ?? "1024x1024"] ?? "1024x1024";
 
+    // gpt-image-1 uses "low" | "medium" | "high" — not "standard"
+    const qualityMap: Record<string, "low" | "medium" | "high"> = {
+      standard: "medium",
+      high: "high",
+      low: "low",
+      medium: "medium",
+    };
+    const imageQuality = qualityMap[quality ?? "standard"] ?? "medium";
+
     const response = await openai.images.generate({
       model: "gpt-image-1",
       prompt: stylePrompt,
       size: imageSize,
+      quality: imageQuality,
       n: 1,
     });
 
@@ -313,10 +323,16 @@ router.post("/images/:id/variations", requireAuth, async (req: any, res: any): P
     };
     const imageSize = validSizes[original.size ?? "1024x1024"] ?? "1024x1024";
 
+    const qualityMap: Record<string, "low" | "medium" | "high"> = {
+      standard: "medium", high: "high", low: "low", medium: "medium",
+    };
+    const imageQuality = qualityMap[original.quality ?? "standard"] ?? "medium";
+
     const response = await openai.images.generate({
       model: "gpt-image-1",
       prompt: stylePrompt,
       size: imageSize,
+      quality: imageQuality,
       n: 1,
     });
 

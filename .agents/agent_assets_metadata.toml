@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "1yRvsI8cF2B8FqV73MgC-"
+uri = "file://lumina.zip"
+type = "unspecified"
+title = "Lumina – Full Project (zip)"
