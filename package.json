@@ -1,0 +1,14 @@
+{
+  "name": "lumina-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node dev.js",
+    "dev:server": "npm --prefix lumina-ai/server run dev",
+    "dev:client": "npm --prefix lumina-ai/client run dev",
+    "build:server": "npm --prefix lumina-ai/server run build",
+    "build:client": "npm --prefix lumina-ai/client run build",
+    "build": "npm --prefix lumina-ai/server run build && npm --prefix lumina-ai/client run build"
+  }
+}

@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(139, 92, 246, 0.15), transparent),
+    #0a0a10;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.35);
+}
+
+/* visible keyboard focus everywhere */
+:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.prism-text {
+  background: linear-gradient(115deg, #8b5cf6, #22d3ee, #fb7756);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

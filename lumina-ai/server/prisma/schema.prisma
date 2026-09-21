@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String?
+  createdAt DateTime @default(now())
+
+  images      Image[]
+  collections Collection[]
+
+  @@index([email])
+}
+
+model Image {
+  id           String   @id @default(cuid())
+  prompt       String
+  url          String   // data URL or hosted storage URL
+  isFavorite   Boolean  @default(false)
+  // if this image is a variation of another image, point back to the parent
+  parentId     String?
+  parent       Image?   @relation("Variations", fields: [parentId], references: [id], onDelete: SetNull)
+  variations   Image[]  @relation("Variations")
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  collections CollectionImage[]
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Collection {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images    CollectionImage[]
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model CollectionImage {
+  collectionId String
+  imageId      String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  image        Image      @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  addedAt      DateTime   @default(now())
+
+  @@id([collectionId, imageId])
+}
